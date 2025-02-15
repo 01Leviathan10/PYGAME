@@ -235,10 +235,11 @@ def update():
         buffer_distance = -15  # Adjust this value to change the hitting distance
         for enemy in enemies:
             if hero.rect.inflate(buffer_distance, buffer_distance).colliderect(enemy.rect):
-                try:
-                    sounds.hit.play()  # Play a collision sound if available.
-                except Exception:
-                    pass
+                if music_on:
+                    try:
+                        sounds.hit.play()  # Play a collision sound if available.
+                    except Exception:
+                        pass
                 start_game()  # Restart game on hit.
 
         # Check if the hero has jumped over an enemy.
@@ -256,10 +257,11 @@ def update():
         # Check if the hero has reached the end of the screen.
         if hero.pos[0] > WIDTH:
             game_state = "won"
-            try:
-                sounds.win.play()  # Play win sound if available.
-            except Exception:
-                pass
+            if music_on:
+                try:
+                    sounds.win.play()  # Play win sound if available.
+                except Exception:
+                    pass
 
 def draw():
     """Called automatically by Pygame Zero to redraw the screen."""
