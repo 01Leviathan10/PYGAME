@@ -16,6 +16,10 @@ enemies = []
 menu_buttons = []
 enemies_jumped = 0
 
+# Timer for spawning enemies
+enemy_spawn_timer = 0
+enemy_spawn_interval = 120  # Spawn a new enemy every 120 frames (2 seconds at 60 FPS)
+
 def draw_placeholder_sprite(sprite_name, center):
     """
     Draws a placeholder sprite using simple shapes and text.
@@ -37,13 +41,14 @@ def draw_placeholder_sprite(sprite_name, center):
 
 class Button:
     """A clickable button for the menu."""
-    def __init__(self, rect, text, callback):
+    def __init__(self, rect, text, callback, color='lightblue'):
         self.rect = rect
         self.text = text
         self.callback = callback
+        self.color = color
 
     def draw(self):
-        screen.draw.filled_rect(self.rect, 'lightblue')
+        screen.draw.filled_rect(self.rect, self.color)
         screen.draw.rect(self.rect, 'white')
         screen.draw.text(self.text, center=self.rect.center, fontsize=30, color='black')
 
@@ -135,13 +140,13 @@ class Hero(Character):
 
 class Enemy(Character):
     """Enemy class: moves back and forth within its territory."""
-    def __init__(self, pos, left_bound, right_bound, number):
+    def __init__(self, pos, number):
         images = [f'enemy{number}_1.png', f'enemy{number}_2.png']  # List of enemy images
         super().__init__(images, pos)
         self.speed = 2
         self.direction = 1  # 1 = moving right, -1 = moving left
-        self.left_bound = left_bound
-        self.right_bound = right_bound
+        self.left_bound = pos[0] - 100  # Left boundary for movement
+        self.right_bound = pos[0] + 100  # Right boundary for movement
 
     def update(self):
         # Patrol movement: move horizontally and reverse direction at bounds.
@@ -160,11 +165,12 @@ class Enemy(Character):
 
 def start_game():
     """Callback to start the game (called from the main menu)."""
-    global game_state, hero, enemies, score, hero_health, enemies_jumped
+    global game_state, hero, enemies, score, hero_health, enemies_jumped, enemy_spawn_timer
     game_state = "playing"
     score = 0
     hero_health = 3
     enemies_jumped = 0
+    enemy_spawn_timer = 0
     # Initialize the hero at a starting position.
     hero = Hero([100, 500])
     # Create initial enemies.
@@ -178,8 +184,12 @@ def toggle_music():
     music_on = not music_on
     if music_on:
         play_background_music()
+        menu_buttons[1].text = "Music: On"
+        menu_buttons[1].color = 'lightblue'
     else:
         music.stop()
+        menu_buttons[1].text = "Music: Off"
+        menu_buttons[1].color = 'gray'
 
 def play_background_music():
     """Play background music if music is enabled."""
@@ -200,14 +210,14 @@ def init_menu():
     exit_rect = Rect((WIDTH // 2 - 100, 400), (200, 50))
     menu_buttons = [
         Button(start_rect, "Start Game", start_game),
-        Button(music_rect, "Music: On/Off", toggle_music),
+        Button(music_rect, "Music: On", toggle_music),
         Button(exit_rect, "Exit", exit_game)
     ]
 
 def spawn_enemy():
     """Spawn a new enemy at a random position."""
     x = random.randint(300, WIDTH - 100)
-    enemy = Enemy([x, 500], x - 50, x + 50, random.randint(1, 3))
+    enemy = Enemy([x, 500], random.randint(1, 3))
     enemies.append(enemy)
 
 # Call init_menu once at startup.
@@ -215,7 +225,7 @@ init_menu()
 
 def update():
     """Called automatically by Pygame Zero every frame."""
-    global game_state, hero, enemies, enemies_jumped
+    global game_state, hero, enemies, enemies_jumped, enemy_spawn_timer
     if game_state == "playing":
         hero.update()
         for enemy in enemies:
@@ -238,8 +248,10 @@ def update():
                 enemy.jumped = True
 
         # Spawn new enemies periodically.
-        if len(enemies) < 3:
+        enemy_spawn_timer += 1
+        if enemy_spawn_timer >= enemy_spawn_interval:
             spawn_enemy()
+            enemy_spawn_timer = 0
 
         # Check if the hero has reached the end of the screen.
         if hero.pos[0] > WIDTH:
